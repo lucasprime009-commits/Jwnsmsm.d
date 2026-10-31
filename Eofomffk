@@ -1,0 +1,223 @@
+-- // Siddhant Hub - Blox Fruits Script \\
+-- // Optimized for Mobile Executors (Delta, etc.) \\
+
+local success, OrionLib = pcall(function()
+    return loadstring(game:HttpGet(('https://raw.githubusercontent.com/shlexware/Orion/main/source')))()
+end)
+
+if not success or not OrionLib then
+    warn("Failed to load Orion Library. Check your internet or executor HTTP get support.")
+    return
+end
+
+local Window = OrionLib:MakeWindow({Name = "Siddhant Hub", HidePremium = false, SaveConfig = true, ConfigFolder = "SiddhantConfig"})
+
+local Player = game.Players.LocalPlayer
+local Character = Player.Character or Player.CharacterAdded:Wait()
+local HumanoidRootPart = Character:WaitForChild("HumanoidRootPart")
+
+-- Keep character updated on respawn
+Player.CharacterAdded:Connect(function(newChar)
+    Character = newChar
+    HumanoidRootPart = newChar:WaitForChild("HumanoidRootPart")
+end)
+
+-- // Global Control Variables \\
+getgenv().FlyEnabled = false
+getgenv().NoAnimEnabled = false
+getgenv().FlySpeed = 50 -- Default speed
+
+-- // Function: Fly Mechanism \\
+local function ToggleFly(state)
+    getgenv().FlyEnabled = state
+    if getgenv().FlyEnabled then
+        task.spawn(function()
+            local bg = Instance.new("BodyGyro", HumanoidRootPart)
+            local bv = Instance.new("BodyVelocity", HumanoidRootPart)
+            bg.P = 9e4
+            bg.maxTorque = Vector3.new(9e4, 9e4, 9e4)
+            bv.maxForce = Vector3.new(9e4, 9e4, 9e4)
+            
+            while getgenv().FlyEnabled and Character and Character:FindFirstChild("HumanoidRootPart") do
+                local cam = workspace.CurrentCamera
+                bg.cframe = cam.CFrame
+                bv.velocity = cam.CFrame.lookVector * getgenv().FlySpeed
+                task.wait()
+            end
+            
+            bg:Destroy()
+            bv:Destroy()
+        end)
+    end
+end
+
+-- // Function: No Animation Mechanism \\
+task.spawn(function()
+    while true do
+        task.wait(0.1)
+        if getgenv().NoAnimEnabled and Player.Character then
+            local humanoid = Player.Character:FindFirstChildOfClass("Humanoid")
+            if humanoid then
+                local animTable = humanoid:GetPlayingAnimationTracks()
+                for _, track in ipairs(animTable) do
+                    track:Stop()
+                end
+            end
+        end
+    end
+end)
+
+-- ========================================================
+-- // ON-SCREEN MOBILE OVERLAY INTERFACE \\
+-- ========================================================
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "SiddhantMobileUI"
+ScreenGui.ResetOnSpawn = false
+
+-- Safe parenting for mobile executors
+local guiSuccess, err = pcall(function()
+    if syn and syn.protect_gui then
+        syn.protect_gui(ScreenGui)
+        ScreenGui.Parent = game:GetService("CoreGui")
+    else
+        ScreenGui.Parent = Player:WaitForChild("PlayerGui")
+    end
+end)
+if not guiSuccess then
+    ScreenGui.Parent = Player:WaitForChild("PlayerGui")
+end
+
+local Frame = Instance.new("Frame")
+Frame.Parent = ScreenGui
+Frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+Frame.BorderSizePixel = 0
+Frame.Position = UDim2.new(0.4, 0, 0.3, 0)
+Frame.Size = UDim2.new(0, 200, 0, 140)
+Frame.Active = true
+Frame.Draggable = true
+
+local Title = Instance.new("TextLabel")
+Title.Parent = Frame
+Title.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+Title.Size = UDim2.new(1, 0, 0, 25)
+Title.Font = Enum.Font.SourceSansBold
+Title.Text = "Siddhant Mobile Controls"
+Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.TextSize = 14
+
+-- Fly Toggle Button
+local FlyBtn = Instance.new("TextButton")
+FlyBtn.Parent = Frame
+FlyBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 200)
+FlyBtn.Position = UDim2.new(0.05, 0, 0.25, 0)
+FlyBtn.Size = UDim2.new(0.42, 0, 0.3, 0)
+FlyBtn.Font = Enum.Font.SourceSansBold
+FlyBtn.Text = "FLY: OFF"
+FlyBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+FlyBtn.TextSize = 14
+
+FlyBtn.MouseButton1Click:Connect(function()
+    ToggleFly(not getgenv().FlyEnabled)
+    FlyBtn.Text = getgenv().FlyEnabled and "FLY: ON" or "FLY: OFF"
+    FlyBtn.BackgroundColor3 = getgenv().FlyEnabled and Color3.fromRGB(50, 200, 50) or Color3.fromRGB(200, 50, 200)
+end)
+
+-- Speed Label
+local SpeedDisplay = Instance.new("TextLabel")
+SpeedDisplay.Parent = Frame
+SpeedDisplay.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+SpeedDisplay.Position = UDim2.new(0.53, 0, 0.25, 0)
+SpeedDisplay.Size = UDim2.new(0.42, 0, 0.3, 0)
+SpeedDisplay.Font = Enum.Font.SourceSansBold
+SpeedDisplay.Text = "Speed: " .. tostring(getgenv().FlySpeed)
+SpeedDisplay.TextColor3 = Color3.fromRGB(255, 255, 255)
+SpeedDisplay.TextSize = 13
+
+-- Speed Up Button (+5)
+local PlusBtn = Instance.new("TextButton")
+PlusBtn.Parent = Frame
+PlusBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 255)
+PlusBtn.Position = UDim2.new(0.05, 0, 0.6, 0)
+PlusBtn.Size = UDim2.new(0.42, 0, 0.16, 0)
+PlusBtn.Font = Enum.Font.SourceSansBold
+PlusBtn.Text = "+5 Speed"
+PlusBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+PlusBtn.TextSize = 12
+
+PlusBtn.MouseButton1Click:Connect(function()
+    getgenv().FlySpeed = getgenv().FlySpeed + 5
+    SpeedDisplay.Text = "Speed: " .. tostring(getgenv().FlySpeed)
+end)
+
+-- Speed Down Button (-5)
+local MinusBtn = Instance.new("TextButton")
+MinusBtn.Parent = Frame
+MinusBtn.BackgroundColor3 = Color3.fromRGB(255, 150, 0)
+MinusBtn.Position = UDim2.newF and UDim2.new(0.53, 0, 0.6, 0) or UDim2.new(0.53, 0, 0.6, 0)
+MinusBtn.Size = UDim2.new(0.42, 0, 0.16, 0)
+MinusBtn.Font = Enum.Font.SourceSansBold
+MinusBtn.Text = "-5 Speed"
+MinusBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+MinusBtn.TextSize = 12
+
+MinusBtn.MouseButton1Click:Connect(function()
+    if getgenv().FlySpeed > 5 then
+        getgenv().FlySpeed = getgenv().FlySpeed - 5
+        SpeedDisplay.Text = "Speed: " .. tostring(getgenv().FlySpeed)
+    end
+end)
+
+-- No Animation Button
+local NoAnimBtn = Instance.new("TextButton")
+NoAnimBtn.Parent = Frame
+NoAnimBtn.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
+NoAnimBtn.Position = UDim2.new(0.05, 0, 0.8, 0)
+NoAnimBtn.Size = UDim2.new(0.9, 0, 0.16, 0)
+NoAnimBtn.Font = Enum.Font.SourceSansBold
+NoAnimBtn.Text = "No Anim: OFF"
+NoAnimBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+NoAnimBtn.TextSize = 12
+
+NoAnimBtn.MouseButton1Click:Connect(function()
+    getgenv().NoAnimEnabled = not getgenv().NoAnimEnabled
+    NoAnimBtn.Text = getgenv().NoAnimEnabled and "No Anim: ON" or "No Anim: OFF"
+    NoAnimBtn.BackgroundColor3 = getgenv().NoAnimEnabled and Color3.fromRGB(50, 180, 50) or Color3.fromRGB(100, 100, 100)
+end)
+
+-- ========================================================
+-- // ORION TAB MENU INTERFACE \\
+-- ========================================================
+local MainTab = Window:MakeTab({Name = "Main", Icon = "rbxassetid://4483345998", PremiumOnly = false})
+MainTab:AddSection({Name = "Auto Farm & Combat"})
+MainTab:AddToggle({Name = "Auto Farm Level", Default = false, Callback = function(V) getgenv().AutoFarm = V end})
+MainTab:AddToggle({Name = "Auto Leviathan Sea Event", Default = false, Callback = function(V) getgenv().AutoLeviathan = V end})
+
+local MovementTab = Window:MakeTab({Name = "Movement", Icon = "rbxassetid://4483345998", PremiumOnly = false})
+MovementTab:AddSection({Name = "Flight & Animations"})
+MovementTab:AddToggle({
+    Name = "Enable Fly", 
+    Default = false, 
+    Callback = function(Value)
+        ToggleFly(Value)
+        FlyBtn.Text = Value and "FLY: ON" or "FLY: OFF"
+        FlyBtn.BackgroundColor3 = Value and Color3.fromRGB(50, 200, 50) or Color3.fromRGB(200, 50, 200)
+    end
+})
+MovementTab:AddSlider({
+    Name = "Fly Speed", Min = 5, Max = 300, Default = 50, Increment = 5, ValueName = "Speed",
+    Callback = function(Value)
+        getgenv().FlySpeed = Value
+        SpeedDisplay.Text = "Speed: " .. tostring(Value)
+    end
+})
+MovementTab:AddToggle({
+    Name = "No Animation (Moving)", 
+    Default = false, 
+    Callback = function(Value)
+        getgenv().NoAnimEnabled = Value
+        NoAnimBtn.Text = Value and "No Anim: ON" or "No Anim: OFF"
+        NoAnimBtn.BackgroundColor3 = Value and Color3.fromRGB(50, 180, 50) or Color3.fromRGB(100, 100, 100)
+    end
+})
+
+OrionLib:Init()
